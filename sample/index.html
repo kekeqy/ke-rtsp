@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="UTF-8">
+    <title>HTML5视频直播测试</title>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+
+    <video id="mse" muted width="640" height="360"></video>
+
+    <script>
+        var mime = 'video/mp4; codecs="avc1.64001E"';
+        var buffer;
+        var socket;
+        var video = document.getElementById('mse');
+        var mediaSource = new MediaSource();
+        video.src = URL.createObjectURL(mediaSource);
+        video.play();
+
+        mediaSource.addEventListener('sourceended', function (e) {
+            console.log('sourceended: ' + mediaSource.readyState);
+        });
+        mediaSource.addEventListener('sourceclose', function (e) {
+            console.log('sourceclose: ' + mediaSource.readyState);
+        });
+        mediaSource.addEventListener('error', function (e) {
+            console.log('error: ' + mediaSource.readyState);
+        });
+        mediaSource.addEventListener('sourceopen', function (e) {
+            buffer = mediaSource.addSourceBuffer(mime);
+            buffer.mode = 'sequence';
+            buffer.addEventListener('updateend', function (e) {
+                //hack to get safari on mac to start playing, video.currentTime gets stuck on 0
+                if (mediaSource.duration !== Number.POSITIVE_INFINITY && video.currentTime === 0 &&
+                    mediaSource.duration > 0) {
+                    video.currentTime = mediaSource.duration - 1;
+                    mediaSource.duration = Number.POSITIVE_INFINITY;
+                }
+            });
+
+            socket = io(null, {
+                transports: ['websocket']
+            });
+
+            var config = {
+                channelid: '1',
+                channelname: '测试摄像头',
+                url: 'rtsp://admin:admin888@192.168.1.64:554/h264/ch1/main/av_stream'
+            };
+            socket.emit('start', JSON.stringify(config));
+
+            socket.on('segment', function (data) {
+                var data = new Uint8Array(data);
+                buffer.appendBuffer(data);
+            });
+        }, false);
+    </script>
+</body>
+
+</html>
