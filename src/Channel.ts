@@ -28,10 +28,12 @@ export class Channel {
         if (this.isStreamWrap) return;
         this.isStreamWrap = true;
         this._mp4Frag = new Mp4Fragment(undefined, data => this.broadcast(data));
-        this._ffmpeg = spawn('ffmpeg', ['-loglevel', 'quiet', '-probesize', '64', '-analyzeduration', '100000', '-reorder_queue_size', '5', '-rtsp_transport', 'tcp', '-i', this.config.url, '-an', '-c:v', 'copy', '-f', 'mp4', '-movflags', '+frag_keyframe+empty_moov+default_base_moof', '-metadata', `title="${this.config.channelname}"`, '-reset_timestamps', '1', 'pipe:1']);
+        this._ffmpeg = spawn('ffmpeg', ['-loglevel', 'quiet', '-i', this.config.url, '-an', '-c:v', 'copy', '-f', 'mp4', '-movflags', '+frag_keyframe+empty_moov+default_base_moof', 'pipe:1']);
         this._ffmpeg.stdio[1].pipe(this._mp4Frag);
     }
+    private i: number = 0;
     private broadcast(data: any): void {
+        console.log(++this.i);
         for (let client of this.clients) {
             if ((client as any).initSegment) client.emit('segment', data);
         }

@@ -20,6 +20,7 @@ export declare class Channel {
     constructor(config: ChannelConfig);
     /** 开始封装码流 */
     startStreamWrap(): void;
+    private i;
     private broadcast;
     /** 结束封装码流 */
     stopStreamWrap(): void;

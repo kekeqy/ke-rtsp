@@ -15,6 +15,7 @@ var Channel = /** @class */ (function () {
         this.clients = [];
         /** 是否正在封装码流 */
         this.isStreamWrap = false;
+        this.i = 0;
         this.config = config;
     }
     /** 开始封装码流 */
@@ -24,10 +25,11 @@ var Channel = /** @class */ (function () {
             return;
         this.isStreamWrap = true;
         this._mp4Frag = new Mp4Fragment_1.Mp4Fragment(undefined, function (data) { return _this.broadcast(data); });
-        this._ffmpeg = child_process_1.spawn('ffmpeg', ['-loglevel', 'quiet', '-probesize', '64', '-analyzeduration', '100000', '-reorder_queue_size', '5', '-rtsp_transport', 'tcp', '-i', this.config.url, '-an', '-c:v', 'copy', '-f', 'mp4', '-movflags', '+frag_keyframe+empty_moov+default_base_moof', '-metadata', "title=\"" + this.config.channelname + "\"", '-reset_timestamps', '1', 'pipe:1']);
+        this._ffmpeg = child_process_1.spawn('ffmpeg', ['-loglevel', 'quiet', '-i', this.config.url, '-an', '-c:v', 'copy', '-f', 'mp4', '-movflags', '+frag_keyframe+empty_moov+default_base_moof', 'pipe:1']);
         this._ffmpeg.stdio[1].pipe(this._mp4Frag);
     };
     Channel.prototype.broadcast = function (data) {
+        console.log(++this.i);
         for (var _i = 0, _a = this.clients; _i < _a.length; _i++) {
             var client = _a[_i];
             if (client.initSegment)

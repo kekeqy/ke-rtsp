@@ -14,6 +14,13 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var stream_1 = require("stream");
+var _FTYP = Buffer.from([0x66, 0x74, 0x79, 0x70]); // ftyp
+var _MOOV = Buffer.from([0x6D, 0x6F, 0x6F, 0x76]); // moov
+var _MOOF = Buffer.from([0x6D, 0x6F, 0x6F, 0x66]); // moof
+var _MFRA = Buffer.from([0x6d, 0x66, 0x72, 0x61]); // mfra
+var _MDAT = Buffer.from([0x6D, 0x64, 0x61, 0x74]); // mdat
+var _MP4A = Buffer.from([0x6d, 0x70, 0x34, 0x61]); // mp4a
+var _AVCC = Buffer.from([0x61, 0x76, 0x63, 0x43]); // avcC
 /** MP4片段 */
 var Mp4Fragment = /** @class */ (function (_super) {
     __extends(Mp4Fragment, _super);
@@ -205,18 +212,49 @@ var Mp4Fragment = /** @class */ (function (_super) {
         else {
             //mdat第一遍
             //第一遍为了确保mdat的启动和获得其大小，很可能块不会包含整个mdat
-            if (chunk[4] !== 0x6D || chunk[5] !== 0x64 || chunk[6] !== 0x61 || chunk[7] !== 0x74) {
+            if (chunk.length < 8 || chunk.indexOf(_MDAT) !== 4) {
                 console.log('无法找到mdat！');
             }
             var chunkLength = chunk.length;
-            this._mdatLength = chunk.readUIntBE(0, 4);
+            this._mdatLength = chunk.readUInt32BE(0, true);
             if (this._mdatLength > chunkLength) {
                 //几乎100%保证超过单个块的大小
                 this._mdatBuffer = [chunk];
                 this._mdatBufferSize = chunkLength;
             }
+            else if (this._mdatLength === chunkLength) {
+                var data = Buffer.concat([this._moof, chunk], (this._moofLength + chunkLength));
+                delete this._moof;
+                delete this._moofLength;
+                delete this._mdatLength;
+                if (this._readableState.pipesCount > 0) {
+                    this.push(data);
+                }
+                if (this._callback) {
+                    this._callback(data);
+                }
+                if (this.listenerCount('segment') > 0) {
+                    this.emit('segment', data);
+                }
+                this._parseChunk = this._findMoof;
+            }
             else {
-                console.log('mdat的长度不大于块的长度！');
+                var data = Buffer.concat([this._moof, chunk], (this._moofLength + this._mdatLength));
+                var sliceIndex = this._mdatLength;
+                delete this._moof;
+                delete this._moofLength;
+                delete this._mdatLength;
+                if (this._readableState.pipesCount > 0) {
+                    this.push(data);
+                }
+                if (this._callback) {
+                    this._callback(data);
+                }
+                if (this.listenerCount('segment') > 0) {
+                    this.emit('segment', data);
+                }
+                this._parseChunk = this._findMoof;
+                this._parseChunk(chunk.slice(sliceIndex));
             }
         }
     };
