@@ -14,10 +14,4 @@
     4、浏览器打开http://localhost:8080/。
 
 # 集成到你的项目中
-## 1、安装模块
-    npm i ke-rtsp
-## 2、导入模块
-    import * as rtsp from 'ke-rtsp';
-## 3、创建一个流媒体服务器对象
-    new rtsp.StreamingMediaServer(http);
-    参数http为http.Server对象。
+代码量较少，请自行加工后将源代码添加到你的项目中，npm上的代码不再更新维护。
